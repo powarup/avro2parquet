@@ -2,6 +2,8 @@ package com.powarup.avro2parquet;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Iterator;
 
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Parser;
@@ -53,6 +55,37 @@ public class Converter
 
 		parquetWriter.close();
 		reader.close();
+	}
+	
+	public static void writeAvroRecords(String schemaFileName, Collection<GenericRecord> records, String parquetFileName) throws IOException {
+		writeAvroRecords(schemaFileName, records, parquetFileName, defaultCompressionCodecName);
+	}
+	
+	public static void writeAvroRecords(String schemaFileName, Collection<GenericRecord> records, String parquetFileName, CompressionCodecName compressionCodecName) throws IOException {
+		Schema schema = new Parser().parse(new File(schemaFileName));
+
+		File f = new File(parquetFileName);
+		if (f.exists()) {
+			f.delete();
+		}
+		Path outputPath = new Path(parquetFileName);
+
+		// the ParquetWriter object that will consume Avro GenericRecords
+
+		ParquetWriter<GenericRecord> parquetWriter = AvroParquetWriter
+				.<GenericRecord>builder(outputPath)
+				.withSchema(schema)
+				.withConf(new Configuration())
+				.withCompressionCodec(compressionCodecName)
+				.build(); 
+		
+		Iterator<GenericRecord> recordIterator = records.iterator();
+		while (recordIterator.hasNext()) {
+			GenericRecord record = recordIterator.next();
+			parquetWriter.write(record);
+		}
+		
+		parquetWriter.close();
 	}
 	
 	public static void main( String[] args )
